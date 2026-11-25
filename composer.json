@@ -1,0 +1,95 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "st-all-one/resolucao-dio-me-curso-php-construindo-api",
+    "description": "Bands API — reimplementação do desafio DIO com Laravel 13, PHP 8.5, DDD-lite, SQLite e Docker.",
+    "type": "project",
+    "license": "MIT",
+    "readme": "README.md",
+    "homepage": "https://github.com/st-all-one/Resolucao-dio-me-curso-php-construindo-api",
+    "keywords": ["laravel", "php85", "ddd-lite", "api", "sqlite", "caddy", "dio"],
+    "authors": [
+        {
+            "name": "Stallone LS",
+            "role": "Owner"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/st-all-one/Resolucao-dio-me-curso-php-construindo-api/issues",
+        "source": "https://github.com/st-all-one/Resolucao-dio-me-curso-php-construindo-api"
+    },
+    "require": {
+        "php": "^8.5.13",
+        "laravel/framework": "^13.17",
+        "laravel/tinker": "^3.0"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.0",
+        "laravel/pail": "^1.2.5",
+        "laravel/pao": "^1.0.6",
+        "laravel/pint": "^1.27",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.6",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^12.5.12"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "setup": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan key:generate",
+            "@php artisan migrate --force"
+        ],
+        "quality": ["@validate", "@lint", "@static", "@test"],
+        "validate": "composer validate --strict --no-check-publish",
+        "lint": "vendor/bin/pint --test app bootstrap config database public routes tests --no-ansi",
+        "static": "vendor/bin/phpstan analyse --no-progress --memory-limit=512M",
+        "test": [
+            "@php artisan config:clear --ansi",
+            "@php artisan test"
+        ],
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ],
+        "pre-package-uninstall": [
+            "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.5.13"
+        },
+        "audit": {
+            "abandoned": "report"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

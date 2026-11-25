@@ -1,0 +1,96 @@
+name: dio-bands-api
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/php-fpm.Dockerfile
+  expose: []
+  environment: &app-env
+    APP_NAME: "DIO Bands API"
+    APP_ENV: local
+    APP_DEBUG: "false"
+    APP_URL: http://localhost:24001
+    APP_KEY: ${APP_KEY:?defina APP_KEY no .env (make up gera automaticamente)}
+    LOG_CHANNEL: stack
+    LOG_STACK: json
+    LOG_LEVEL: info
+    DB_CONNECTION: sqlite
+    DB_DATABASE: /var/www/html/database/sqlite/database.sqlite
+    DB_JOURNAL_MODE: wal
+    DB_BUSY_TIMEOUT: "5000"
+    QUEUE_CONNECTION: database
+    DB_QUEUE: default
+    CACHE_STORE: file
+  volumes:
+    - ./:/var/www/html
+    - bands-data:/var/www/html/database/sqlite
+  restart: unless-stopped
+
+services:
+  php:
+    <<: *app
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit((int)!(new PDO('sqlite:/var/www/html/database/sqlite/database.sqlite')));"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  caddy:
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    ports:
+      - "${HTTP_PORT:-24001}:24003"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./public:/var/www/html/public:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      php:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:24003/up"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    <<: *app
+    command: >
+      php artisan queue:work database
+      --queue=indexing
+      --tries=3
+      --backoff=5,15,30
+      --timeout=30
+      --max-jobs=200
+      --max-time=3600
+      --sleep=1
+
+    depends_on:
+      php:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "queue:work"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+  # Inicializa o SQLite e aplica schema + seed antes de qualquer request.
+  db-init:
+    <<: *app
+    restart: "no"
+    command: >
+      sh -c "mkdir -p /var/www/html/database/sqlite
+      && touch /var/www/html/database/sqlite/database.sqlite
+      && chown -R www-data:www-data /var/www/html/database/sqlite
+      && chmod -R 770 /var/www/html/database/sqlite
+      && php artisan migrate --force --no-interaction
+      && php artisan db:seed --force --no-interaction"
+
+volumes:
+  bands-data:
+  caddy-data:
+  caddy-config:
